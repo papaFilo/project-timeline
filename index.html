@@ -16,7 +16,8 @@
     --text:#1a2338;--text-dim:#6b7a99;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
 
   .topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:var(--bg-2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:10px}
   .brand{display:flex;align-items:center;gap:12px}
@@ -31,19 +32,22 @@
   .btn.danger{background:rgba(255,77,109,.15);color:var(--blocked);border-color:rgba(255,77,109,.4)}
   .btn.danger:hover{background:rgba(255,77,109,.25);border-color:var(--blocked)}
   .btn.locked{background:linear-gradient(135deg,#ffb020,#ff8c00);color:#000;border-color:transparent;font-weight:700}
+  .btn.publish{background:linear-gradient(135deg,#00d4ff,#7c5cff);color:#000;border-color:transparent;font-weight:700;animation:glow 2s infinite}
+  @keyframes glow{0%,100%{box-shadow:0 0 8px rgba(0,212,255,.4)}50%{box-shadow:0 0 20px rgba(0,212,255,.8)}}
 
-  .stats-bar{display:flex;gap:20px;padding:10px 20px;background:var(--bg-2);border-bottom:1px solid var(--border);font-size:12px;overflow-x:auto}
+  .stats-bar{display:flex;gap:20px;padding:10px 20px;background:var(--bg-2);border-bottom:1px solid var(--border);font-size:12px;overflow-x:auto;flex-shrink:0}
   .stat-item{display:flex;align-items:center;gap:6px;white-space:nowrap}
   .stat-dot{width:9px;height:9px;border-radius:50%}
   .stat-label{color:var(--text-dim)}
   .stat-val{font-weight:700}
 
-  .gantt{margin:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:var(--label-w) 1fr;max-height:calc(100vh - 160px)}
-  .labels{overflow:hidden;border-right:2px solid var(--border);background:var(--card);display:flex;flex-direction:column}
+  .gantt{margin:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:var(--label-w) 1fr;flex:1;min-height:0}
+  .labels{overflow:hidden;border-right:2px solid var(--border);background:var(--card);display:flex;flex-direction:column;min-height:0}
   .labels-header{height:70px;background:var(--bg-2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);font-weight:700;flex-shrink:0}
   .labels-header .add-btn{background:var(--accent);color:#000;border:none;width:26px;height:26px;border-radius:6px;font-weight:800;cursor:pointer;font-size:15px;line-height:1}
-  .labels-body{overflow-y:auto;scrollbar-width:none;flex:1}
-  .labels-body::-webkit-scrollbar{display:none}
+  .labels-body{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0}
+  .labels-body::-webkit-scrollbar{width:6px}
+  .labels-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
   .label-group{height:40px;display:flex;align-items:center;padding:0 10px 0 14px;font-size:12px;font-weight:700;background:var(--bg-2);border-bottom:1px solid var(--border-soft);border-left:4px solid var(--g-color,var(--accent));gap:8px}
   .label-group .badge{font-size:10px;background:var(--g-color,var(--accent));color:#000;padding:1px 7px;border-radius:10px;font-weight:800}
   .label-group .grp-actions{margin-left:auto;display:flex;gap:4px}
@@ -59,7 +63,11 @@
   .label-row .row-actions button.edit:hover{background:var(--border);color:var(--accent)}
   .label-row .row-actions button.del:hover{background:rgba(255,77,109,.15);color:var(--blocked)}
 
-  .chart-scroll{overflow:auto;position:relative;flex:1}
+  .chart-scroll{overflow:auto;position:relative;min-height:0;cursor:grab}
+  .chart-scroll.dragging{cursor:grabbing;user-select:none}
+  .chart-scroll.dragging *{pointer-events:none}
+  .zoom-info{position:absolute;top:8px;right:12px;padding:4px 10px;background:var(--card);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:700;color:var(--accent);z-index:20;pointer-events:none;opacity:0;transition:opacity .2s}
+  .zoom-info.show{opacity:1}
   .chart-inner{position:relative;min-width:max-content}
   .timeline-header{position:sticky;top:0;z-index:10;background:var(--bg-2);border-bottom:1px solid var(--border)}
   .tl-periods,.tl-ticks{display:flex;height:35px}
@@ -93,6 +101,7 @@
   .chart-scroll::-webkit-scrollbar{height:10px;width:10px}
   .chart-scroll::-webkit-scrollbar-track{background:var(--bg-2)}
   .chart-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px}
+  .chart-scroll::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 
   .tooltip{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12px;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:9999;pointer-events:none;display:none}
   .tooltip.show{display:block}
@@ -128,22 +137,21 @@
   .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
   .toast .undo-btn{background:rgba(0,0,0,.2);border:none;color:#000;padding:4px 12px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px;font-family:inherit}
 
-  /* ===== SYNC BADGE — dipindah ke kanan bawah ===== */
-  .sync-badge{
-    position:fixed;bottom:14px;right:14px;top:auto;left:auto;
-    padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;
-    z-index:60;background:var(--card);border:1px solid var(--border);
-    color:var(--text-dim);display:flex;align-items:center;gap:6px;
-    box-shadow:0 4px 12px rgba(0,0,0,.3);
-    opacity:0;transition:opacity .3s,transform .3s;
-    pointer-events:none;transform:translateY(10px);
-  }
-  .sync-badge.show{opacity:1;transform:translateY(0);}
+  .sync-badge{position:fixed;bottom:14px;right:14px;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;z-index:60;background:var(--card);border:1px solid var(--border);color:var(--text-dim);display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(0,0,0,.3);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;transform:translateY(10px)}
+  .sync-badge.show{opacity:1;transform:translateY(0)}
   .sync-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--pending)}
   .sync-badge.syncing .dot{background:var(--progress);animation:pulse 1s infinite}
   .sync-badge.synced .dot{background:var(--done)}
   .sync-badge.error .dot{background:var(--blocked)}
+  .sync-badge.dirty .dot{background:var(--progress)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  .publish-hint{background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(124,92,255,.1));border:1px solid var(--accent);border-radius:10px;padding:14px;margin:14px 0;font-size:12px;line-height:1.7}
+  .publish-hint h4{color:var(--accent);font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .publish-hint ol{margin-left:20px;color:var(--text-dim)}
+  .publish-hint ol li{margin:4px 0}
+  .publish-hint a{color:var(--accent);text-decoration:underline}
+  .publish-hint code{background:var(--bg-2);padding:2px 6px;border-radius:4px;font-size:11px;color:var(--accent)}
 
   @media(max-width:700px){:root{--label-w:200px}.form-row{grid-template-columns:1fr}.brand h1{font-size:12px}}
 </style>
@@ -156,9 +164,9 @@ window.CONFIG = {
   GITHUB_OWNER: "PapaFilo",
   GITHUB_REPO: "project-timeline",
   GITHUB_BRANCH: "main",
-  GITHUB_TOKEN: "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",
   EDIT_PASSWORD: "jabung2026",
-  DATA_FILE: "data.json"
+  DATA_FILE: "data.json",
+  AUTO_REFRESH_SECONDS: 60
 };
 </script>
 
@@ -181,6 +189,11 @@ window.CONFIG = {
     <button class="btn" data-scale="day">Hari</button>
     <button class="btn primary edit-only" id="addActBtn" style="display:none">➕ Activity</button>
     <button class="btn edit-only" id="addCatBtn" style="display:none">📁 Kategori</button>
+    <button class="btn publish edit-only" id="publishBtn" style="display:none">💾 Simpan ke File</button>
+    <button class="btn" id="zoomOutBtn" title="Perkecil (Ctrl + Scroll)">🔍−</button>
+    <button class="btn" id="zoomResetBtn" title="Reset zoom">100%</button>
+    <button class="btn" id="zoomInBtn" title="Perbesar (Ctrl + Scroll)">🔍+</button>
+    <button class="btn" id="refreshBtn">🔄 Refresh</button>
     <button class="btn" id="themeBtn">🌙</button>
   </div>
 </div>
@@ -196,6 +209,7 @@ window.CONFIG = {
     <div class="labels-body" id="labelsBody"></div>
   </div>
   <div class="chart-scroll" id="chartScroll">
+    <div class="zoom-info" id="zoomInfo">100%</div>
     <div class="chart-inner" id="chartInner"></div>
   </div>
 </div>
@@ -207,15 +221,17 @@ window.CONFIG = {
 
 <script>
 /* ============================================================
-   CORE APP
+   CORE APP — TANPA TOKEN, dengan zoom dinamis
    ============================================================ */
 const CFG = window.CONFIG;
-const API_BASE = `https://api.github.com/repos/${CFG.GITHUB_OWNER}/${CFG.GITHUB_REPO}/contents`;
 
 let SCALE = "hour";
+let ZOOM = 1.0;
 const SCALES = { hour:{pxPerHour:40,tickHours:4}, day:{pxPerHour:10,tickHours:24} };
 let DATA = [];
 let IS_ADMIN = false;
+let IS_DIRTY = false;
+let _lastFetchTime = 0;
 
 /* ============ UTILS ============ */
 const uid = () => Math.random().toString(36).slice(2,10);
@@ -225,7 +241,7 @@ const toInputDT = s => s ? s.slice(0,16) : "";
 function toLocalISO(d){const p=n=>String(n).padStart(2,"0");return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
 const escapeHtml = s => String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-/* ============ GITHUB SYNC ============ */
+/* ============ SYNC BADGE ============ */
 let _syncTimer = null;
 function setSync(status, text, autoHideMs = 3000) {
   const b = document.getElementById("syncBadge");
@@ -233,24 +249,24 @@ function setSync(status, text, autoHideMs = 3000) {
   document.getElementById("syncText").textContent = text;
   b.classList.add("show");
   clearTimeout(_syncTimer);
-  if (autoHideMs > 0) {
-    _syncTimer = setTimeout(() => b.classList.remove("show"), autoHideMs);
-  }
+  if (autoHideMs > 0) _syncTimer = setTimeout(() => b.classList.remove("show"), autoHideMs);
 }
 
+/* ============ LOAD DARI GITHUB ============ */
 async function fetchFromGitHub() {
-  setSync("syncing", "Loading dari GitHub...", 0);
+  setSync("syncing", "Loading...", 0);
   try {
     const url = `https://raw.githubusercontent.com/${CFG.GITHUB_OWNER}/${CFG.GITHUB_REPO}/${CFG.GITHUB_BRANCH}/${CFG.DATA_FILE}?t=${Date.now()}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const json = await res.json();
     DATA = json;
+    _lastFetchTime = Date.now();
     localStorage.setItem("gantt_backup", JSON.stringify(json));
-    setSync("synced", "✓ Synced"); // auto-hide 3s
+    setSync("synced", "✓ Data terbaru");
     return true;
   } catch(e) {
-    console.warn("Gagal fetch GitHub, pakai backup lokal:", e);
+    console.warn("Gagal fetch GitHub:", e);
     const backup = localStorage.getItem("gantt_backup");
     if (backup) {
       DATA = JSON.parse(backup);
@@ -262,53 +278,81 @@ async function fetchFromGitHub() {
   }
 }
 
-async function saveToGitHub() {
-  if (!IS_ADMIN) { showToast("⚠ Readonly mode", "var(--progress)"); return; }
-  if (!CFG.GITHUB_TOKEN || CFG.GITHUB_TOKEN.includes("ANDA")) {
-    showToast("⚠ Token belum diisi", "var(--progress)");
-    localStorage.setItem("gantt_backup", JSON.stringify(DATA));
-    return;
-  }
-  setSync("syncing", "Saving ke GitHub...", 0);
-  try {
-    // Ambil SHA terbaru (kalau ada)
-    let sha = null;
-    const getUrl = `${API_BASE}/${CFG.DATA_FILE}?ref=${CFG.GITHUB_BRANCH}`;
-    const getRes = await fetch(getUrl, {
-      headers: { "Authorization": `token ${CFG.GITHUB_TOKEN}`, "Accept": "application/vnd.github+json" }
-    });
-    if (getRes.ok) { const j = await getRes.json(); sha = j.sha; }
+/* ============ DOWNLOAD data.json ============ */
+function downloadDataFile() {
+  const json = JSON.stringify(DATA, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `data.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  IS_DIRTY = false;
+  updateDirtyBadge();
+}
 
-    // Encode ke base64
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
-
-    const putRes = await fetch(`${API_BASE}/${CFG.DATA_FILE}`, {
-      method: "PUT",
-      headers: {
-        "Authorization": `token ${CFG.GITHUB_TOKEN}`,
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: `Update timeline — ${new Date().toLocaleString("id-ID")}`,
-        content,
-        sha,
-        branch: CFG.GITHUB_BRANCH
-      })
-    });
-    if (!putRes.ok) {
-      const err = await putRes.json().catch(()=>({}));
-      throw new Error(err.message || ("HTTP " + putRes.status));
-    }
-    localStorage.setItem("gantt_backup", JSON.stringify(DATA));
-    setSync("synced", "✓ Tersimpan ke GitHub");
-    showToast("✓ Tersimpan di GitHub");
-  } catch(e) {
-    console.error("Save error:", e);
-    setSync("error", "⚠ Gagal save: " + e.message, 8000);
-    showToast("⚠ Gagal save ke GitHub", "var(--blocked)");
-    localStorage.setItem("gantt_backup", JSON.stringify(DATA));
+/* ============ DIRTY STATE ============ */
+function markDirty() {
+  if (!IS_ADMIN) return;
+  IS_DIRTY = true;
+  updateDirtyBadge();
+}
+function updateDirtyBadge() {
+  const btn = document.getElementById("publishBtn");
+  if (!btn || !IS_ADMIN) return;
+  if (IS_DIRTY) {
+    btn.innerHTML = "💾 Simpan ke File ●";
+    btn.style.animation = "glow 1s infinite";
+  } else {
+    btn.innerHTML = "💾 Simpan ke File";
+    btn.style.animation = "none";
   }
+}
+
+/* ============ PUBLISH MODAL ============ */
+function showPublishModal() {
+  document.getElementById("modalContent").innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>💾 Simpan & Upload ke GitHub</h3>
+    <p class="sub">Ikuti 3 langkah ini untuk publish perubahan</p>
+
+    <div class="publish-hint">
+      <h4>📥 Langkah 1: Download File</h4>
+      <p style="color:var(--text-dim);font-size:12px">Klik tombol di bawah untuk download <code>data.json</code> terbaru.</p>
+    </div>
+
+    <div style="text-align:center;margin:14px 0">
+      <button class="btn primary" id="btn-download" style="padding:12px 24px;font-size:14px">📥 Download data.json</button>
+    </div>
+
+    <div class="publish-hint">
+      <h4>📤 Langkah 2: Upload ke GitHub</h4>
+      <ol>
+        <li>Buka <a href="https://github.com/${CFG.GITHUB_OWNER}/${CFG.GITHUB_REPO}" target="_blank">repo GitHub Anda</a></li>
+        <li>Klik file <code>data.json</code></li>
+        <li>Klik ikon ✏️ (Edit) → <b>Ctrl+A</b> → hapus semua</li>
+        <li>Paste isi file baru, atau drag & drop file baru</li>
+        <li>Scroll bawah → <b>Commit changes</b></li>
+      </ol>
+    </div>
+
+    <div class="publish-hint">
+      <h4>🔄 Langkah 3: Refresh</h4>
+      <p style="color:var(--text-dim);font-size:12px">Tunggu 1-2 menit → semua orang yang buka web akan dapat update terbaru otomatis (auto-refresh tiap ${CFG.AUTO_REFRESH_SECONDS} detik).</p>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal()">Tutup</button>
+    </div>
+  `;
+  document.getElementById("modal").classList.add("show");
+  document.getElementById("btn-download").onclick = () => {
+    downloadDataFile();
+    showToast("✓ File ter-download. Silakan upload ke GitHub.");
+  };
 }
 
 /* ============ ADMIN UNLOCK ============ */
@@ -356,7 +400,11 @@ function applyAdminMode() {
     unlockBtn.classList.add("locked");
     modeLabel.textContent = "🔓 Edit Mode (admin)";
     unlockBtn.onclick = () => {
+      if (IS_DIRTY) {
+        if (!confirm("Ada perubahan yang belum di-download. Yakin keluar dari edit mode?")) return;
+      }
       IS_ADMIN = false;
+      IS_DIRTY = false;
       sessionStorage.removeItem("gantt_admin");
       applyAdminMode();
       refresh();
@@ -368,6 +416,7 @@ function applyAdminMode() {
     modeLabel.textContent = "🔒 View Only";
     unlockBtn.onclick = unlockAdmin;
   }
+  updateDirtyBadge();
 }
 
 /* ============ RANGE CALC ============ */
@@ -389,7 +438,7 @@ function recalcRange() {
   rangeEnd = new Date(rangeStart.getTime() + totalHours*3600*1000);
 }
 const hourOffset = s => (parseDT(s) - rangeStart)/(3600*1000);
-const pxPerHour = () => SCALES[SCALE].pxPerHour;
+const pxPerHour = () => SCALES[SCALE].pxPerHour * ZOOM;
 
 /* ============ STATS ============ */
 function renderStats() {
@@ -627,7 +676,7 @@ function attachDrag(el, catId, actId, mode, forcedEvent) {
       document.removeEventListener("mouseup", onUp);
       if (moved) {
         el._wasDragged = true;
-        saveToGitHub();
+        markDirty();
       }
     };
     document.addEventListener("mousemove", onMove);
@@ -708,12 +757,12 @@ function doDeleteActivity(catId, actId) {
   const deleted = cat.activities[idx];
   const snap = JSON.parse(JSON.stringify(cat.activities));
   cat.activities.splice(idx, 1);
-  saveToGitHub();
+  markDirty();
   refresh();
   closeModal();
   showToast(`🗑 "${deleted.nama}" dihapus`, "var(--blocked)", () => {
     cat.activities = snap;
-    saveToGitHub();
+    markDirty();
     refresh();
     showToast("↩ Activity dikembalikan");
   });
@@ -729,12 +778,12 @@ function askDeleteCategory(catId) {
       const idx = DATA.findIndex(c => c.id === catId);
       const snap = JSON.parse(JSON.stringify(DATA));
       DATA.splice(idx, 1);
-      saveToGitHub();
+      markDirty();
       refresh();
       closeModal();
       showToast(`🗑 Kategori "${cat.nama}" dihapus`, "var(--blocked)", () => {
         DATA = snap;
-        saveToGitHub();
+        markDirty();
         refresh();
         showToast("↩ Kategori dikembalikan");
       });
@@ -799,9 +848,10 @@ function saveActivity(catId, actId) {
   if (parseDT(payload.end) <= parseDT(payload.start)) { showToast("⚠ Selesai harus setelah mulai", "var(--progress)"); return; }
   if (actId) { const act = findActivity(catId, actId); if (act) Object.assign(act, payload); }
   else { cat.activities = cat.activities || []; cat.activities.push({ id: uid(), ...payload }); }
-  saveToGitHub();
+  markDirty();
   refresh();
   closeModal();
+  showToast("✓ Tersimpan. Klik 💾 Simpan ke File untuk publish.");
 }
 
 /* ============ CATEGORY ============ */
@@ -847,9 +897,10 @@ function saveCategory(catId) {
   if (!nama) { showToast("⚠ Nama wajib", "var(--progress)"); return; }
   if (catId) { const c = findCategory(catId); c.nama = nama; c.color = color; }
   else DATA.push({ id: uid(), nama, color, activities: [] });
-  saveToGitHub();
+  markDirty();
   refresh();
   closeModal();
+  showToast("✓ Tersimpan. Klik 💾 Simpan ke File untuk publish.");
 }
 const addActivity = catId => openActivityModal(catId, null);
 const closeModal = () => document.getElementById("modal").classList.remove("show");
@@ -895,6 +946,106 @@ document.getElementById("unlockBtn").onclick = unlockAdmin;
 document.getElementById("addActBtn").onclick = () => { if (!DATA.length) { showToast("⚠ Buat kategori dulu", "var(--progress)"); return; } openActivityModal(DATA[0].id, null); };
 document.getElementById("addActBtn2").onclick = () => { if (!DATA.length) { showToast("⚠ Buat kategori dulu", "var(--progress)"); return; } openActivityModal(DATA[0].id, null); };
 document.getElementById("addCatBtn").onclick = addCategory;
+document.getElementById("publishBtn").onclick = showPublishModal;
+document.getElementById("refreshBtn").onclick = async () => {
+  if (IS_DIRTY) {
+    if (!confirm("Ada perubahan yang belum di-publish. Yakin refresh? Perubahan akan hilang.")) return;
+    IS_DIRTY = false;
+    updateDirtyBadge();
+  }
+  await fetchFromGitHub();
+  refresh();
+  showToast("🔄 Data dimuat ulang");
+};
+
+/* ============ ZOOM & SCROLL ============ */
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 5.0;
+
+function updateZoomUI() {
+  const pct = Math.round(ZOOM * 100);
+  document.getElementById("zoomResetBtn").textContent = pct + "%";
+  const zi = document.getElementById("zoomInfo");
+  zi.textContent = pct + "%";
+  zi.classList.add("show");
+  clearTimeout(zi._t);
+  zi._t = setTimeout(() => zi.classList.remove("show"), 1200);
+}
+
+function setZoom(newZoom) {
+  const oldZoom = ZOOM;
+  ZOOM = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, newZoom));
+  if (ZOOM === oldZoom) return;
+  const scrollEl = document.getElementById("chartScroll");
+  const ratioX = scrollEl.scrollLeft / Math.max(1, scrollEl.scrollWidth);
+  const oldScrollTop = scrollEl.scrollTop;
+  renderChart();
+  requestAnimationFrame(() => {
+    scrollEl.scrollLeft = ratioX * scrollEl.scrollWidth;
+    scrollEl.scrollTop = oldScrollTop;
+    labelsBody.scrollTop = oldScrollTop;
+  });
+  updateZoomUI();
+}
+
+document.getElementById("zoomInBtn").onclick = () => setZoom(ZOOM * 1.25);
+document.getElementById("zoomOutBtn").onclick = () => setZoom(ZOOM / 1.25);
+document.getElementById("zoomResetBtn").onclick = () => setZoom(1.0);
+
+/* Ctrl + Wheel = zoom horizontal
+   Shift + Wheel = scroll horizontal
+   Wheel biasa = scroll vertikal (default) */
+chartScroll.addEventListener("wheel", (e) => {
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    const rect = chartScroll.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left + chartScroll.scrollLeft;
+    const ratioBefore = mouseX / chartScroll.scrollWidth;
+
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const oldZoom = ZOOM;
+    ZOOM = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, ZOOM * factor));
+    if (ZOOM === oldZoom) return;
+
+    const oldScrollTop = chartScroll.scrollTop;
+    renderChart();
+
+    requestAnimationFrame(() => {
+      chartScroll.scrollLeft = ratioBefore * chartScroll.scrollWidth - (e.clientX - rect.left);
+      chartScroll.scrollTop = oldScrollTop;
+      labelsBody.scrollTop = oldScrollTop;
+    });
+    updateZoomUI();
+  } else if (e.shiftKey) {
+    e.preventDefault();
+    chartScroll.scrollLeft += e.deltaY;
+  }
+}, { passive: false });
+
+/* Drag to pan */
+let _isPanning = false, _panStartX = 0, _panStartY = 0, _panStartScrollL = 0, _panStartScrollT = 0;
+chartScroll.addEventListener("mousedown", (e) => {
+  if (e.target.closest(".bar")) return;
+  if (e.button !== 0) return;
+  _isPanning = true;
+  _panStartX = e.clientX;
+  _panStartY = e.clientY;
+  _panStartScrollL = chartScroll.scrollLeft;
+  _panStartScrollT = chartScroll.scrollTop;
+  chartScroll.classList.add("dragging");
+});
+document.addEventListener("mousemove", (e) => {
+  if (!_isPanning) return;
+  chartScroll.scrollLeft = _panStartScrollL - (e.clientX - _panStartX);
+  chartScroll.scrollTop = _panStartScrollT - (e.clientY - _panStartY);
+  labelsBody.scrollTop = chartScroll.scrollTop;
+});
+document.addEventListener("mouseup", () => {
+  if (_isPanning) {
+    _isPanning = false;
+    chartScroll.classList.remove("dragging");
+  }
+});
 
 /* ============ REFRESH ============ */
 function refresh() {
@@ -902,6 +1053,7 @@ function refresh() {
   renderStats();
   renderLabels();
   renderChart();
+  updateDirtyBadge();
 }
 
 /* ============ INIT ============ */
@@ -911,8 +1063,11 @@ function refresh() {
   await fetchFromGitHub();
   refresh();
   setInterval(async () => {
-    if (!IS_ADMIN) { await fetchFromGitHub(); refresh(); }
-  }, 60000);
+    if (!IS_ADMIN && !IS_DIRTY) {
+      await fetchFromGitHub();
+      refresh();
+    }
+  }, CFG.AUTO_REFRESH_SECONDS * 1000);
 })();
 </script>
 </body>
