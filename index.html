@@ -153,7 +153,18 @@
   .publish-hint a{color:var(--accent);text-decoration:underline}
   .publish-hint code{background:var(--bg-2);padding:2px 6px;border-radius:4px;font-size:11px;color:var(--accent)}
 
-  @media(max-width:700px){:root{--label-w:200px}.form-row{grid-template-columns:1fr}.brand h1{font-size:12px}}
+  /* Detail View styling */
+  .detail-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700}
+  .detail-section{margin-bottom:16px}
+  .detail-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .detail-value{font-size:13px;font-weight:600}
+  .detail-tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;margin:2px 4px 2px 0}
+  .detail-tag.pic{background:rgba(124,92,255,.15);color:#a78bfa}
+  .detail-tag.tool{background:rgba(0,212,255,.12);color:var(--accent)}
+  .detail-note{font-size:13px;line-height:1.6;background:var(--bg-2);padding:10px 12px;border-radius:8px;border-left:3px solid var(--accent);color:var(--text)}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+  @media(max-width:700px){:root{--label-w:200px}.form-row{grid-template-columns:1fr}.brand h1{font-size:12px}.detail-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -221,7 +232,7 @@ window.CONFIG = {
 
 <script>
 /* ============================================================
-   CORE APP — TANPA TOKEN, dengan zoom dinamis
+   CORE APP
    ============================================================ */
 const CFG = window.CONFIG;
 
@@ -427,11 +438,18 @@ function recalcRange() {
     if (a.start) all.push(parseDT(a.start));
     if (a.end) all.push(parseDT(a.end));
   }));
-  if (!all.length) { rangeStart = new Date(); rangeEnd = new Date(); rangeStart.setHours(0,0,0,0); rangeEnd.setHours(23,0,0,0); }
-  else { rangeStart = new Date(Math.min(...all)); rangeEnd = new Date(Math.max(...all)); }
+  if (!all.length) {
+    rangeStart = new Date(); rangeEnd = new Date();
+    rangeStart.setHours(0,0,0,0); rangeEnd.setHours(23,0,0,0);
+  } else {
+    rangeStart = new Date(Math.min(...all));
+    rangeEnd = new Date(Math.max(...all));
+  }
   const tH = SCALES[SCALE].tickHours;
-  rangeStart = new Date(rangeStart.getTime() - tH*3600*1000);
-  rangeEnd = new Date(rangeEnd.getTime() + tH*3600*1000);
+  // Padding: hanya untuk mode jam (setengah tick), mode hari tanpa padding
+  const padMs = SCALE === "hour" ? tH*3600*1000/2 : 0;
+  rangeStart = new Date(rangeStart.getTime() - padMs);
+  rangeEnd   = new Date(rangeEnd.getTime()   + padMs);
   rangeStart.setMinutes(0,0,0);
   rangeStart.setHours(Math.floor(rangeStart.getHours()/tH)*tH);
   totalHours = Math.ceil((rangeEnd - rangeStart)/(3600*1000)/tH)*tH;
@@ -499,7 +517,9 @@ function renderLabels() {
       if (IS_ADMIN) {
         row.querySelector(".edit").onclick = e => { e.stopPropagation(); openActivityModal(cat.id, a.id); };
         row.querySelector(".del").onclick = e => { e.stopPropagation(); askDeleteActivity(cat.id, a.id); };
-        row.onclick = () => openActivityModal(cat.id, a.id);
+        row.onclick = () => openActivityDetail(cat.id, a.id);
+      } else {
+        row.onclick = () => openActivityDetail(cat.id, a.id);
       }
       body.appendChild(row);
     });
@@ -524,8 +544,16 @@ function renderChart() {
   for (let i = 0; i < numTicks; i++) {
     const d = new Date(rangeStart.getTime() + i*tH*3600*1000);
     let key;
-    if (SCALE === "hour") key = d.toLocaleString("id-ID",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
-    else { const sw = new Date(d); sw.setDate(d.getDate()-d.getDay()); key = "Minggu "+sw.toLocaleDateString("id-ID",{day:"2-digit",month:"short"}); }
+    if (SCALE === "hour") {
+      key = d.toLocaleString("id-ID",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
+    } else {
+      // Ambil tanggal awal pekan (Senin)
+      const sw = new Date(d);
+      const day = sw.getDay();
+      const diff = (day === 0 ? -6 : 1 - day);
+      sw.setDate(sw.getDate() + diff);
+      key = "Pekan " + sw.toLocaleDateString("id-ID", { day:"2-digit", month:"short" });
+    }
     pg[key] = (pg[key]||0)+1;
   }
   Object.entries(pg).forEach(([label,count]) => {
@@ -621,14 +649,12 @@ function renderChart() {
         attachDrag(bar, cat.id, a.id, "move");
         bar.querySelector(".handle.left").addEventListener("mousedown", ev => { ev.stopPropagation(); attachDrag(bar, cat.id, a.id, "resize-left", ev); });
         bar.querySelector(".handle.right").addEventListener("mousedown", ev => { ev.stopPropagation(); attachDrag(bar, cat.id, a.id, "resize-right", ev); });
-        bar.addEventListener("click", () => {
-          if (bar._wasDragged) { bar._wasDragged = false; return; }
-          openActivityModal(cat.id, a.id);
-        });
-        bar.style.cursor = "pointer";
-      } else {
-        bar.style.cursor = "default";
       }
+
+      bar.addEventListener("click", () => {
+        if (bar._wasDragged) { bar._wasDragged = false; return; }
+        openActivityDetail(cat.id, a.id);
+      });
 
       row.appendChild(bar);
       body.appendChild(row);
@@ -701,6 +727,7 @@ function showTooltip(e, a) {
     <div class="tt-row"><span>Mulai</span><b>${fmtDT(a.start)}</b></div>
     <div class="tt-row"><span>Selesai</span><b>${fmtDT(a.end)}</b></div>
     <div class="tt-row"><span>PIC</span><b>${escapeHtml(a.pic||"-")}</b></div>
+    <div style="font-size:10px;color:var(--text-dim);margin-top:6px;text-align:center;font-style:italic">💡 Klik untuk detail lengkap</div>
   `;
   tooltip.classList.add("show");
   moveTooltip(e);
@@ -735,7 +762,6 @@ function showConfirm({ title, message, confirmText = "Hapus", onConfirm }) {
   ov.classList.add("show");
   document.getElementById("cfm-cancel").onclick = () => ov.classList.remove("show");
   document.getElementById("cfm-ok").onclick = () => { ov.classList.remove("show"); onConfirm(); };
-  ov.onclick = e => { if (e.target === ov) ov.classList.remove("show"); };
 }
 
 /* ============ DELETE ============ */
@@ -791,7 +817,84 @@ function askDeleteCategory(catId) {
   });
 }
 
-/* ============ ACTIVITY MODAL ============ */
+/* ============ ACTIVITY DETAIL (read-only) ============ */
+function openActivityDetail(catId, actId) {
+  const cat = findCategory(catId);
+  const a = findActivity(catId, actId);
+  if (!cat || !a) return;
+  const s = STATUS[a.status];
+  const start = parseDT(a.start);
+  const end = parseDT(a.end);
+  const durMs = end - start;
+  const durHari = Math.floor(durMs / (24*3600*1000));
+  const durJam = Math.floor((durMs % (24*3600*1000)) / (3600*1000));
+  const durMenit = Math.floor((durMs % (3600*1000)) / (60*1000));
+  let durStr = "";
+  if (durHari > 0) durStr += durHari + " hari ";
+  if (durJam > 0) durStr += durJam + " jam ";
+  if (durMenit > 0) durStr += durMenit + " mnt";
+  if (!durStr) durStr = "-";
+
+  const picList = (a.pic || "").split(",").map(x => x.trim()).filter(Boolean);
+  const toolsList = (a.tools || "").split(",").map(x => x.trim()).filter(Boolean);
+
+  document.getElementById("modalContent").innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <span class="detail-badge" style="background:${s.color}22;color:${s.color}">${s.icon} ${s.label}</span>
+      <span style="font-size:11px;color:var(--text-dim)">Progress ${a.progress}%</span>
+    </div>
+    <h3 style="font-size:18px">${escapeHtml(a.nama)}</h3>
+    <p class="sub" style="margin-bottom:18px">${escapeHtml(cat.nama)}</p>
+
+    <div class="detail-grid" style="margin-bottom:16px">
+      <div>
+        <div class="detail-label">Mulai</div>
+        <div class="detail-value">${fmtDT(a.start)}</div>
+      </div>
+      <div>
+        <div class="detail-label">Selesai</div>
+        <div class="detail-value">${fmtDT(a.end)}</div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label">Durasi</div>
+      <div class="detail-value">${durStr.trim()}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label">PIC</div>
+      <div>${picList.length ? picList.map(p => `<span class="detail-tag pic">👤 ${escapeHtml(p)}</span>`).join("") : '<span style="color:var(--text-dim);font-size:12px">-</span>'}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label">Tools / Support</div>
+      <div>${toolsList.length ? toolsList.map(t => `<span class="detail-tag tool">🔧 ${escapeHtml(t)}</span>`).join("") : '<span style="color:var(--text-dim);font-size:12px">-</span>'}</div>
+    </div>
+
+    ${a.catatan ? `
+    <div class="detail-section">
+      <div class="detail-label">Catatan</div>
+      <div class="detail-note">${escapeHtml(a.catatan)}</div>
+    </div>` : ""}
+
+    <div class="form-actions" style="margin-top:24px">
+      ${IS_ADMIN ? `<button class="btn primary" id="btn-edit-from-detail">✎ Edit Activity</button>` : ""}
+      <button class="btn" onclick="closeModal()">Tutup</button>
+    </div>
+  `;
+  document.getElementById("modal").classList.add("show");
+
+  if (IS_ADMIN) {
+    document.getElementById("btn-edit-from-detail").onclick = () => {
+      closeModal();
+      setTimeout(() => openActivityModal(catId, actId), 150);
+    };
+  }
+}
+
+/* ============ ACTIVITY MODAL (edit) ============ */
 function openActivityModal(catId, actId = null) {
   if (!IS_ADMIN) return;
   const cat = findCategory(catId);
@@ -904,7 +1007,6 @@ function saveCategory(catId) {
 }
 const addActivity = catId => openActivityModal(catId, null);
 const closeModal = () => document.getElementById("modal").classList.remove("show");
-document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
 
 /* ============ TOAST ============ */
 function showToast(msg, color = "var(--done)", undoFn = null) {
@@ -941,6 +1043,16 @@ document.getElementById("themeBtn").addEventListener("click", () => {
   document.getElementById("themeBtn").textContent = next === "light" ? "☀️" : "🌙";
 });
 
+/* ============ KEYBOARD: ESC untuk tutup modal ============ */
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    const modal = document.getElementById("modal");
+    const confirm = document.getElementById("confirmModal");
+    if (modal.classList.contains("show")) closeModal();
+    if (confirm.classList.contains("show")) confirm.classList.remove("show");
+  }
+});
+
 /* ============ BUTTONS ============ */
 document.getElementById("unlockBtn").onclick = unlockAdmin;
 document.getElementById("addActBtn").onclick = () => { if (!DATA.length) { showToast("⚠ Buat kategori dulu", "var(--progress)"); return; } openActivityModal(DATA[0].id, null); };
@@ -959,7 +1071,7 @@ document.getElementById("refreshBtn").onclick = async () => {
 };
 
 /* ============ ZOOM & SCROLL ============ */
-const ZOOM_MIN = 0.1;
+const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 5.0;
 
 function updateZoomUI() {
@@ -992,9 +1104,6 @@ document.getElementById("zoomInBtn").onclick = () => setZoom(ZOOM * 1.25);
 document.getElementById("zoomOutBtn").onclick = () => setZoom(ZOOM / 1.25);
 document.getElementById("zoomResetBtn").onclick = () => setZoom(1.0);
 
-/* Ctrl + Wheel = zoom horizontal
-   Shift + Wheel = scroll horizontal
-   Wheel biasa = scroll vertikal (default) */
 chartScroll.addEventListener("wheel", (e) => {
   if (e.ctrlKey || e.metaKey) {
     e.preventDefault();
@@ -1022,7 +1131,6 @@ chartScroll.addEventListener("wheel", (e) => {
   }
 }, { passive: false });
 
-/* Drag to pan */
 let _isPanning = false, _panStartX = 0, _panStartY = 0, _panStartScrollL = 0, _panStartScrollT = 0;
 chartScroll.addEventListener("mousedown", (e) => {
   if (e.target.closest(".bar")) return;
