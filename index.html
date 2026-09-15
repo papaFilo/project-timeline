@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Timeline — Gantt</title>
+<style>
+  :root {
+    --bg:#0f1420;--bg-2:#161c2c;--card:#1a2235;--border:#2a3450;--border-soft:#232c44;
+    --text:#e6ecff;--text-dim:#8896b8;--accent:#00d4ff;--accent-2:#7c5cff;
+    --done:#10d98a;--progress:#ffb020;--pending:#64748b;--blocked:#ff4d6d;--today:#ff4d6d;
+    --row-h:44px;--label-w:320px;
+  }
+  [data-theme="light"]{
+    --bg:#f4f6fb;--bg-2:#fff;--card:#fff;--border:#dde4f0;--border-soft:#eef2fa;
+    --text:#1a2338;--text-dim:#6b7a99;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  .topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:var(--bg-2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:10px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;font-size:17px}
+  .brand h1{font-size:14px;font-weight:700}
+  .brand p{font-size:11px;color:var(--text-dim);margin-top:1px}
+  .toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .btn{padding:7px 12px;border-radius:8px;background:var(--card);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-family:inherit}
+  .btn:hover{border-color:var(--accent)}
+  .btn.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent}
+  .btn.primary{background:linear-gradient(135deg,var(--done),#00b377);color:#000;border-color:transparent;font-weight:700}
+  .btn.danger{background:rgba(255,77,109,.15);color:var(--blocked);border-color:rgba(255,77,109,.4)}
+  .btn.danger:hover{background:rgba(255,77,109,.25);border-color:var(--blocked)}
+  .btn.locked{background:linear-gradient(135deg,#ffb020,#ff8c00);color:#000;border-color:transparent;font-weight:700}
+
+  .stats-bar{display:flex;gap:20px;padding:10px 20px;background:var(--bg-2);border-bottom:1px solid var(--border);font-size:12px;overflow-x:auto}
+  .stat-item{display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .stat-dot{width:9px;height:9px;border-radius:50%}
+  .stat-label{color:var(--text-dim)}
+  .stat-val{font-weight:700}
+
+  .gantt{margin:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:grid;grid-template-columns:var(--label-w) 1fr;max-height:calc(100vh - 160px)}
+  .labels{overflow:hidden;border-right:2px solid var(--border);background:var(--card);display:flex;flex-direction:column}
+  .labels-header{height:70px;background:var(--bg-2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);font-weight:700;flex-shrink:0}
+  .labels-header .add-btn{background:var(--accent);color:#000;border:none;width:26px;height:26px;border-radius:6px;font-weight:800;cursor:pointer;font-size:15px;line-height:1}
+  .labels-body{overflow-y:auto;scrollbar-width:none;flex:1}
+  .labels-body::-webkit-scrollbar{display:none}
+  .label-group{height:40px;display:flex;align-items:center;padding:0 10px 0 14px;font-size:12px;font-weight:700;background:var(--bg-2);border-bottom:1px solid var(--border-soft);border-left:4px solid var(--g-color,var(--accent));gap:8px}
+  .label-group .badge{font-size:10px;background:var(--g-color,var(--accent));color:#000;padding:1px 7px;border-radius:10px;font-weight:800}
+  .label-group .grp-actions{margin-left:auto;display:flex;gap:4px}
+  .label-group .grp-actions button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px}
+  .label-group .grp-actions button:hover{background:var(--border);color:var(--text)}
+  .label-row{height:var(--row-h);display:flex;align-items:center;padding:0 6px 0 24px;font-size:12px;border-bottom:1px solid var(--border-soft);gap:6px;cursor:pointer;transition:background .15s;position:relative}
+  .label-row:hover{background:var(--bg-2)}
+  .label-row .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .label-row .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .label-row .row-actions{display:flex;gap:2px;opacity:0;transition:opacity .15s}
+  .label-row:hover .row-actions{opacity:1}
+  .label-row .row-actions button{background:transparent;border:none;color:var(--text-dim);cursor:pointer;font-size:12px;padding:3px 6px;border-radius:4px;font-family:inherit}
+  .label-row .row-actions button.edit:hover{background:var(--border);color:var(--accent)}
+  .label-row .row-actions button.del:hover{background:rgba(255,77,109,.15);color:var(--blocked)}
+
+  .chart-scroll{overflow:auto;position:relative;flex:1}
+  .chart-inner{position:relative;min-width:max-content}
+  .timeline-header{position:sticky;top:0;z-index:10;background:var(--bg-2);border-bottom:1px solid var(--border)}
+  .tl-periods,.tl-ticks{display:flex;height:35px}
+  .tl-period{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text);border-right:1px solid var(--border);background:var(--bg-2);white-space:nowrap;overflow:hidden}
+  .tl-tick{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:var(--text-dim);border-right:1px solid var(--border-soft);flex-shrink:0;overflow:hidden}
+  .tl-tick .hr{font-weight:700;color:var(--text);font-size:11px}
+  .tl-tick .dt{font-size:9px;opacity:.7}
+  .tl-tick.weekend{background:rgba(124,92,255,.05)}
+  .tl-tick.today-h{background:rgba(255,77,109,.15);color:var(--today)}
+  .tl-tick.today-h .hr{color:var(--today)}
+  .chart-body{position:relative}
+  .group-row{height:40px;background:var(--bg-2);border-bottom:1px solid var(--border-soft);position:relative}
+  .group-row .bar-group{position:absolute;top:12px;height:16px;background:linear-gradient(90deg,var(--g-color,var(--accent)),transparent);border-radius:4px;border-left:3px solid var(--g-color,var(--accent))}
+  .row{height:var(--row-h);border-bottom:1px solid var(--border-soft);position:relative;transition:background .15s}
+  .row:hover{background:rgba(0,212,255,.03)}
+  .grid-v{position:absolute;top:0;bottom:0;width:1px;background:var(--border-soft);pointer-events:none}
+  .grid-v.weekend{background:rgba(124,92,255,.08)}
+  .grid-v.today{background:var(--today);width:2px;box-shadow:0 0 8px rgba(255,77,109,.6);z-index:5}
+  .bar{position:absolute;top:10px;height:24px;border-radius:6px;display:flex;align-items:center;font-size:11px;font-weight:600;color:#000;cursor:pointer;overflow:hidden;transition:all .15s;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:3;user-select:none}
+  .bar:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.4);z-index:6}
+  .bar .fill{position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,.25);border-right:2px solid rgba(255,255,255,.6)}
+  .bar .bar-label{position:relative;z-index:2;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar.done{background:var(--done)}
+  .bar.progress{background:var(--progress)}
+  .bar.pending{background:var(--pending);color:#fff}
+  .bar.blocked{background:var(--blocked);color:#fff}
+  .bar .handle{position:absolute;top:0;bottom:0;width:6px;cursor:ew-resize;z-index:4}
+  .bar .handle.left{left:0}
+  .bar .handle.right{right:0}
+  .bar .handle:hover{background:rgba(255,255,255,.4)}
+  .chart-scroll::-webkit-scrollbar{height:10px;width:10px}
+  .chart-scroll::-webkit-scrollbar-track{background:var(--bg-2)}
+  .chart-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px}
+
+  .tooltip{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:12px;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:9999;pointer-events:none;display:none}
+  .tooltip.show{display:block}
+  .tooltip h4{font-size:12px;margin-bottom:6px}
+  .tooltip .tt-row{display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--text-dim)}
+  .tooltip .tt-row b{color:var(--text);font-weight:600}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;z-index:999;padding:20px;overflow-y:auto}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:560px;width:100%;padding:24px;margin:auto;animation:slideUp .25s ease}
+  @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .modal h3{font-size:16px;margin-bottom:4px}
+  .modal .sub{font-size:12px;color:var(--text-dim);margin-bottom:18px}
+  .modal-close{float:right;background:transparent;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;line-height:1;font-family:inherit}
+  .modal-close:hover{color:var(--text)}
+  .form-group{margin-bottom:14px}
+  .form-group label{display:block;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600}
+  .form-group input[type="text"],.form-group input[type="datetime-local"],.form-group input[type="number"],.form-group input[type="password"],.form-group select,.form-group textarea{width:100%;padding:9px 12px;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;transition:border-color .15s}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.15)}
+  .form-group textarea{resize:vertical;min-height:60px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end;flex-wrap:wrap}
+  .form-actions .left-group{margin-right:auto;display:flex;gap:8px}
+
+  .confirm-box{background:var(--card);border:1px solid var(--border);border-radius:16px;max-width:400px;width:100%;padding:24px;margin:auto;text-align:center;animation:slideUp .25s ease}
+  .confirm-icon{width:56px;height:56px;border-radius:50%;background:rgba(255,77,109,.15);color:var(--blocked);font-size:26px;display:grid;place-items:center;margin:0 auto 14px}
+  .confirm-box h3{font-size:16px;margin-bottom:8px}
+  .confirm-box p{font-size:13px;color:var(--text-dim);margin-bottom:20px;line-height:1.5}
+  .confirm-actions{display:flex;gap:10px;justify-content:center}
+  .confirm-actions .btn{padding:9px 20px;font-size:13px}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--done);color:#000;padding:12px 18px;border-radius:10px;font-weight:700;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:10000;opacity:0;transition:all .3s;pointer-events:auto;display:flex;align-items:center;gap:14px}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  .toast .undo-btn{background:rgba(0,0,0,.2);border:none;color:#000;padding:4px 12px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px;font-family:inherit}
+
+  .sync-badge{position:fixed;top:14px;left:50%;transform:translateX(-50%);padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;z-index:60;background:var(--card);border:1px solid var(--border);color:var(--text-dim);display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  .sync-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--pending)}
+  .sync-badge.syncing .dot{background:var(--progress);animation:pulse 1s infinite}
+  .sync-badge.synced .dot{background:var(--done)}
+  .sync-badge.error .dot{background:var(--blocked)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  @media(max-width:700px){:root{--label-w:200px}.form-row{grid-template-columns:1fr}.brand h1{font-size:12px}}
+</style>
+</head>
+<body>
+
+<!-- ====== CONFIG — GANTI BAGIAN INI ====== -->
+<script>
+window.CONFIG = {
+  GITHUB_OWNER: "PAPA FILO - Project Timeline",
+  GITHUB_REPO: "project-timeline",
+  GITHUB_BRANCH: "main",
+  GITHUB_TOKEN: "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",
+  EDIT_PASSWORD: "jabung2026",
+  DATA_FILE: "data.json"
+};
+</script>
+
+<div class="sync-badge" id="syncBadge">
+  <span class="dot"></span>
+  <span id="syncText">Loading...</span>
+</div>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">📊</div>
+    <div>
+      <h1>Project Timeline — Gantt</h1>
+      <p id="modeLabel">🔒 View Only</p>
+    </div>
+  </div>
+  <div class="toolbar">
+    <button class="btn" id="unlockBtn">🔓 Unlock Edit</button>
+    <button class="btn active" data-scale="hour">Jam</button>
+    <button class="btn" data-scale="day">Hari</button>
+    <button class="btn primary edit-only" id="addActBtn" style="display:none">➕ Activity</button>
+    <button class="btn edit-only" id="addCatBtn" style="display:none">📁 Kategori</button>
+    <button class="btn" id="exportBtn">💾 Export</button>
+    <button class="btn edit-only" id="importBtn" style="display:none">📥 Import</button>
+    <button class="btn edit-only" id="resetBtn" style="display:none">🔄 Reset</button>
+    <button class="btn" id="themeBtn">🌙</button>
+  </div>
+</div>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div class="gantt">
+  <div class="labels">
+    <div class="labels-header">
+      <span>Activity</span>
+      <button class="add-btn edit-only" id="addActBtn2" title="Tambah Activity" style="display:none">+</button>
+    </div>
+    <div class="labels-body" id="labelsBody"></div>
+  </div>
+  <div class="chart-scroll" id="chartScroll">
+    <div class="chart-inner" id="chartInner"></div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+<div class="modal-overlay" id="modal"><div class="modal" id="modalContent"></div></div>
+<div class="modal-overlay" id="confirmModal"><div class="confirm-box" id="confirmContent"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CORE APP
+   ============================================================ */
+const CFG = window.CONFIG;
+const API_BASE = `https://api.github.com/repos/${CFG.GITHUB_OWNER}/${CFG.GITHUB_REPO}/contents`;
+
+let SCALE = "hour";
+const SCALES = { hour:{pxPerHour:40,tickHours:4}, day:{pxPerHour:10,tickHours:24} };
+let DATA = [];
+let IS_ADMIN = false;
+
+/* ============ UTILS ============ */
+const uid = () => Math.random().toString(36).slice(2,10);
+const parseDT = s => new Date(s);
+function fmtDT(s,w=true){const d=parseDT(s);const o={day:"2-digit",month:"short"};if(w){o.hour="2-digit";o.minute="2-digit";}return d.toLocaleString("id-ID",o);}
+const toInputDT = s => s ? s.slice(0,16) : "";
+function toLocalISO(d){const p=n=>String(n).padStart(2,"0");return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;}
+const escapeHtml = s => String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ============ GITHUB SYNC ============ */
+function setSync(status, text) {
+  const b = document.getElementById("syncBadge");
+  b.className = "sync-badge " + status;
+  document.getElementById("syncText").textContent = text;
+}
+
+async function fetchFromGitHub() {
+  setSync("syncing", "Loading dari GitHub...");
+  try {
+    const url = `https://raw.githubusercontent.com/${CFG.GITHUB_OWNER}/${CFG.GITHUB_REPO}/${CFG.GITHUB_BRANCH}/${CFG.DATA_FILE}?t=${Date.now()}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+    DATA = json;
+    localStorage.setItem("gantt_backup", JSON.stringify(json));
+    setSync("synced", "✓ Synced");
+    setTimeout(() => setSync("", ""), 2000);
+    return true;
+  } catch(e) {
+    console.warn("Gagal fetch GitHub, pakai backup lokal:", e);
+    const backup = localStorage.getItem("gantt_backup");
+    if (backup) {
+      DATA = JSON.parse(backup);
+      setSync("error", "⚠ Offline — pakai cache");
+    } else {
+      setSync("error", "⚠ Gagal load");
+    }
+    return false;
+  }
+}
+
+async function saveToGitHub() {
+  if (!IS_ADMIN) { showToast("⚠ Readonly mode", "var(--progress)"); return; }
+  if (!CFG.GITHUB_TOKEN || CFG.GITHUB_TOKEN.includes("ANDA")) {
+    showToast("⚠ Token belum diisi — hanya tersimpan lokal", "var(--progress)");
+    localStorage.setItem("gantt_backup", JSON.stringify(DATA));
+    return;
+  }
+  setSync("syncing", "Saving ke GitHub...");
+  try {
+    // Ambil SHA terbaru (kalau ada)
+    let sha = null;
+    const getUrl = `${API_BASE}/${CFG.DATA_FILE}?ref=${CFG.GITHUB_BRANCH}`;
+    const getRes = await fetch(getUrl, {
+      headers: { "Authorization": `Bearer ${CFG.GITHUB_TOKEN}`, "Accept": "application/vnd.github+json" }
+    });
+    if (getRes.ok) { const j = await getRes.json(); sha = j.sha; }
+
+    // Encode ke base64
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
+
+    const putRes = await fetch(`${API_BASE}/${CFG.DATA_FILE}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${CFG.GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: `Update timeline — ${new Date().toLocaleString("id-ID")}`,
+        content,
+        sha,
+        branch: CFG.GITHUB_BRANCH
+      })
+    });
+    if (!putRes.ok) {
+      const err = await putRes.json().catch(()=>({}));
+      throw new Error(err.message || ("HTTP " + putRes.status));
+    }
+    localStorage.setItem("gantt_backup", JSON.stringify(DATA));
+    setSync("synced", "✓ Tersimpan ke GitHub");
+    setTimeout(() => setSync("", ""), 2500);
+    showToast("✓ Tersimpan di GitHub");
+  } catch(e) {
+    console.error("Save error:", e);
+    setSync("error", "⚠ Gagal save: " + e.message);
+    showToast("⚠ Gagal save ke GitHub", "var(--blocked)");
+    localStorage.setItem("gantt_backup", JSON.stringify(DATA));
+  }
+}
+
+/* ============ ADMIN UNLOCK ============ */
+function unlockAdmin() {
+  document.getElementById("modalContent").innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>🔓 Unlock Edit Mode</h3>
+    <p class="sub">Masukkan password tim</p>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="pwd" placeholder="Password..." autofocus />
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal()">Batal</button>
+      <button class="btn primary" id="btn-unlock">🔓 Unlock</button>
+    </div>
+  `;
+  document.getElementById("modal").classList.add("show");
+  const check = () => {
+    const pwd = document.getElementById("pwd").value;
+    if (pwd === CFG.EDIT_PASSWORD) {
+      IS_ADMIN = true;
+      sessionStorage.setItem("gantt_admin", "1");
+      applyAdminMode();
+      closeModal();
+      showToast("🔓 Edit mode aktif");
+      refresh();
+    } else {
+      showToast("❌ Password salah", "var(--blocked)");
+    }
+  };
+  document.getElementById("btn-unlock").onclick = check;
+  document.getElementById("pwd").onkeydown = e => { if (e.key === "Enter") check(); };
+  setTimeout(() => document.getElementById("pwd").focus(), 100);
+}
+
+function applyAdminMode() {
+  document.querySelectorAll(".edit-only").forEach(el => {
+    el.style.display = IS_ADMIN ? "" : "none";
+  });
+  const unlockBtn = document.getElementById("unlockBtn");
+  const modeLabel = document.getElementById("modeLabel");
+  if (IS_ADMIN) {
+    unlockBtn.textContent = "🔒 Lock";
+    unlockBtn.classList.add("locked");
+    modeLabel.textContent = "🔓 Edit Mode (admin)";
+    unlockBtn.onclick = () => {
+      IS_ADMIN = false;
+      sessionStorage.removeItem("gantt_admin");
+      applyAdminMode();
+      refresh();
+      showToast("🔒 Kembali ke view mode", "var(--progress)");
+    };
+  } else {
+    unlockBtn.textContent = "🔓 Unlock Edit";
+    unlockBtn.classList.remove("locked");
+    modeLabel.textContent = "🔒 View Only";
+    unlockBtn.onclick = unlockAdmin;
+  }
+}
+
+/* ============ RANGE CALC ============ */
+let rangeStart, rangeEnd, totalHours;
+function recalcRange() {
+  const all = [];
+  DATA.forEach(c => (c.activities||[]).forEach(a => {
+    if (a.start) all.push(parseDT(a.start));
+    if (a.end) all.push(parseDT(a.end));
+  }));
+  if (!all.length) { rangeStart = new Date(); rangeEnd = new Date(); rangeStart.setHours(0,0,0,0); rangeEnd.setHours(23,0,0,0); }
+  else { rangeStart = new Date(Math.min(...all)); rangeEnd = new Date(Math.max(...all)); }
+  const tH = SCALES[SCALE].tickHours;
+  rangeStart = new Date(rangeStart.getTime() - tH*3600*1000);
+  rangeEnd = new Date(rangeEnd.getTime() + tH*3600*1000);
+  rangeStart.setMinutes(0,0,0);
+  rangeStart.setHours(Math.floor(rangeStart.getHours()/tH)*tH);
+  totalHours = Math.ceil((rangeEnd - rangeStart)/(3600*1000)/tH)*tH;
+  rangeEnd = new Date(rangeStart.getTime() + totalHours*3600*1000);
+}
+const hourOffset = s => (parseDT(s) - rangeStart)/(3600*1000);
+const pxPerHour = () => SCALES[SCALE].pxPerHour;
+
+/* ============ STATS ============ */
+function renderStats() {
+  const c = { done:0, progress:0, pending:0, blocked:0 };
+  DATA.forEach(cat => (cat.activities||[]).forEach(a => c[a.status]++));
+  const total = c.done + c.progress + c.pending + c.blocked;
+  const pct = total ? Math.round(c.done/total*100) : 0;
+  document.getElementById("statsBar").innerHTML = `
+    <div class="stat-item"><div class="stat-dot" style="background:var(--accent)"></div>
+      <span class="stat-label">Total:</span><span class="stat-val">${total}</span></div>
+    <div class="stat-item"><div class="stat-dot" style="background:var(--done)"></div>
+      <span class="stat-label">Done:</span><span class="stat-val">${c.done} (${pct}%)</span></div>
+    <div class="stat-item"><div class="stat-dot" style="background:var(--progress)"></div>
+      <span class="stat-label">Progress:</span><span class="stat-val">${c.progress}</span></div>
+    <div class="stat-item"><div class="stat-dot" style="background:var(--pending)"></div>
+      <span class="stat-label">Pending:</span><span class="stat-val">${c.pending}</span></div>
+    <div class="stat-item"><div class="stat-dot" style="background:var(--blocked)"></div>
+      <span class="stat-label">Blocked:</span><span class="stat-val">${c.blocked}</span></div>
+  `;
+}
+
+/* ============ LABELS ============ */
+const STATUS = {
+  done:{label:"Done",color:"#10d98a",icon:"✓"},
+  progress:{label:"Progress",color:"#ffb020",icon:"⚙"},
+  pending:{label:"Pending",color:"#64748b",icon:"○"},
+  blocked:{label:"Blocked",color:"#ff4d6d",icon:"✕"}
+};
+
+function renderLabels() {
+  const body = document.getElementById("labelsBody");
+  body.innerHTML = "";
+  DATA.forEach(cat => {
+    const grp = document.createElement("div");
+    grp.className = "label-group";
+    grp.style.setProperty("--g-color", cat.color);
+    grp.innerHTML = `
+      <span style="cursor:${IS_ADMIN?"pointer":"default"}" ${IS_ADMIN?`onclick="editCategory('${cat.id}')"`:""}>${escapeHtml(cat.nama)}</span>
+      <span class="badge">${(cat.activities||[]).length}</span>
+      ${IS_ADMIN?`<div class="grp-actions">
+        <button title="Tambah" onclick="addActivity('${cat.id}')">➕</button>
+        <button title="Edit" onclick="editCategory('${cat.id}')">✎</button>
+        <button title="Hapus" onclick="askDeleteCategory('${cat.id}')">🗑</button>
+      </div>`:""}
+    `;
+    body.appendChild(grp);
+    (cat.activities||[]).forEach(a => {
+      const row = document.createElement("div");
+      row.className = "label-row";
+      row.innerHTML = `
+        <div class="status-dot" style="background:${STATUS[a.status].color}"></div>
+        <div class="name" title="${escapeHtml(a.nama)}">${escapeHtml(a.nama)}</div>
+        ${IS_ADMIN?`<div class="row-actions">
+          <button class="edit" title="Edit">✎</button>
+          <button class="del" title="Hapus">🗑</button>
+        </div>`:""}
+      `;
+      if (IS_ADMIN) {
+        row.querySelector(".edit").onclick = e => { e.stopPropagation(); openActivityModal(cat.id, a.id); };
+        row.querySelector(".del").onclick = e => { e.stopPropagation(); askDeleteActivity(cat.id, a.id); };
+        row.onclick = () => openActivityModal(cat.id, a.id);
+      }
+      body.appendChild(row);
+    });
+  });
+}
+
+/* ============ CHART ============ */
+function renderChart() {
+  const inner = document.getElementById("chartInner");
+  inner.innerHTML = "";
+  const pph = pxPerHour();
+  const tH = SCALES[SCALE].tickHours;
+  const totalWidth = totalHours * pph;
+  inner.style.width = totalWidth + "px";
+
+  const header = document.createElement("div");
+  header.className = "timeline-header";
+  const periodsRow = document.createElement("div");
+  periodsRow.className = "tl-periods";
+  const pg = {};
+  const numTicks = totalHours / tH;
+  for (let i = 0; i < numTicks; i++) {
+    const d = new Date(rangeStart.getTime() + i*tH*3600*1000);
+    let key;
+    if (SCALE === "hour") key = d.toLocaleString("id-ID",{weekday:"long",day:"2-digit",month:"long",year:"numeric"});
+    else { const sw = new Date(d); sw.setDate(d.getDate()-d.getDay()); key = "Minggu "+sw.toLocaleDateString("id-ID",{day:"2-digit",month:"short"}); }
+    pg[key] = (pg[key]||0)+1;
+  }
+  Object.entries(pg).forEach(([label,count]) => {
+    const el = document.createElement("div");
+    el.className = "tl-period";
+    el.style.width = (count*tH*pph)+"px";
+    el.textContent = label;
+    periodsRow.appendChild(el);
+  });
+
+  const ticksRow = document.createElement("div");
+  ticksRow.className = "tl-ticks";
+  const today = new Date(); today.setMinutes(0,0,0);
+  for (let i = 0; i < numTicks; i++) {
+    const d = new Date(rangeStart.getTime() + i*tH*3600*1000);
+    const el = document.createElement("div");
+    el.className = "tl-tick";
+    el.style.width = (tH*pph)+"px";
+    if (d.getDay()===0||d.getDay()===6) el.classList.add("weekend");
+    const tickEnd = new Date(d.getTime()+tH*3600*1000);
+    if (today>=d && today<tickEnd) el.classList.add("today-h");
+    if (SCALE === "hour") el.innerHTML = `<div class="hr">${String(d.getHours()).padStart(2,"0")}:00</div><div class="dt">${d.getDate()}/${d.getMonth()+1}</div>`;
+    else el.innerHTML = `<div class="hr">${d.getDate()}/${d.getMonth()+1}</div><div class="dt">${d.toLocaleString("id-ID",{weekday:"short"})}</div>`;
+    ticksRow.appendChild(el);
+  }
+  header.appendChild(periodsRow);
+  header.appendChild(ticksRow);
+  inner.appendChild(header);
+
+  const body = document.createElement("div");
+  body.className = "chart-body";
+  body.style.position = "relative";
+
+  const gl = document.createElement("div");
+  gl.style.cssText = "position:absolute;inset:0;pointer-events:none;";
+  for (let i = 0; i <= numTicks; i++) {
+    const d = new Date(rangeStart.getTime() + i*tH*3600*1000);
+    const gv = document.createElement("div");
+    gv.className = "grid-v";
+    if (d.getDay()===0||d.getDay()===6) gv.classList.add("weekend");
+    gv.style.left = (i*tH*pph)+"px";
+    gl.appendChild(gv);
+  }
+  const todayOff = (today - rangeStart)/(3600*1000)*pph;
+  if (todayOff >= 0 && todayOff <= totalWidth) {
+    const tm = document.createElement("div");
+    tm.className = "grid-v today";
+    tm.style.left = todayOff+"px";
+    gl.appendChild(tm);
+  }
+
+  DATA.forEach(cat => {
+    const gr = document.createElement("div");
+    gr.className = "group-row";
+    gr.style.setProperty("--g-color", cat.color);
+    const acts = cat.activities || [];
+    if (acts.length) {
+      const starts = acts.map(a=>hourOffset(a.start));
+      const ends = acts.map(a=>hourOffset(a.end));
+      const gS = Math.min(...starts), gE = Math.max(...ends);
+      const bg = document.createElement("div");
+      bg.className = "bar-group";
+      bg.style.left = (gS*pph)+"px";
+      bg.style.width = ((gE-gS)*pph)+"px";
+      gr.appendChild(bg);
+    }
+    body.appendChild(gr);
+
+    acts.forEach(a => {
+      const row = document.createElement("div");
+      row.className = "row";
+      const s = hourOffset(a.start);
+      const e = hourOffset(a.end);
+      const left = s*pph;
+      const width = Math.max((e-s)*pph-2, 20);
+
+      const bar = document.createElement("div");
+      bar.className = `bar ${a.status}`;
+      bar.style.left = left+"px";
+      bar.style.width = width+"px";
+      bar.innerHTML = `
+        <div class="fill" style="width:${a.progress}%"></div>
+        ${IS_ADMIN?'<div class="handle left"></div>':""}
+        <span class="bar-label">${escapeHtml(a.nama)} · ${a.progress}%</span>
+        ${IS_ADMIN?'<div class="handle right"></div>':""}
+      `;
+
+      bar.addEventListener("mouseenter", ev => showTooltip(ev, a));
+      bar.addEventListener("mousemove", moveTooltip);
+      bar.addEventListener("mouseleave", hideTooltip);
+
+      if (IS_ADMIN) {
+        attachDrag(bar, cat.id, a.id, "move");
+        bar.querySelector(".handle.left").addEventListener("mousedown", ev => { ev.stopPropagation(); attachDrag(bar, cat.id, a.id, "resize-left", ev); });
+        bar.querySelector(".handle.right").addEventListener("mousedown", ev => { ev.stopPropagation(); attachDrag(bar, cat.id, a.id, "resize-right", ev); });
+        bar.addEventListener("click", () => {
+          if (bar._wasDragged) { bar._wasDragged = false; return; }
+          openActivityModal(cat.id, a.id);
+        });
+        bar.style.cursor = "pointer";
+      } else {
+        bar.style.cursor = "default";
+      }
+
+      row.appendChild(bar);
+      body.appendChild(row);
+    });
+  });
+
+  body.appendChild(gl);
+  inner.appendChild(body);
+}
+
+/* ============ DRAG ============ */
+function attachDrag(el, catId, actId, mode, forcedEvent) {
+  const pph = pxPerHour();
+  const activity = findActivity(catId, actId);
+  if (!activity) return;
+
+  const onStart = (e) => {
+    if (forcedEvent && e !== forcedEvent) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const oS = parseDT(activity.start).getTime();
+    const oE = parseDT(activity.end).getTime();
+    el._wasDragged = false;
+    let moved = false;
+
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX;
+      if (Math.abs(dx) > 3) moved = true;
+      const dMs = dx / pph * 3600 * 1000;
+      let ns = oS, ne = oE;
+      if (mode === "move") { ns = oS + dMs; ne = oE + dMs; }
+      else if (mode === "resize-left") { ns = oS + dMs; }
+      else if (mode === "resize-right") { ne = oE + dMs; }
+      const R = 15*60*1000;
+      ns = Math.round(ns/R)*R;
+      ne = Math.round(ne/R)*R;
+      if (ne - ns < R) return;
+      activity.start = toLocalISO(new Date(ns));
+      activity.end = toLocalISO(new Date(ne));
+      renderChart();
+      renderLabels();
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      if (moved) {
+        el._wasDragged = true;
+        saveToGitHub();
+      }
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  if (mode === "move") {
+    el.addEventListener("mousedown", e => {
+      if (e.target.classList.contains("handle")) return;
+      onStart(e);
+    });
+  } else el.addEventListener("mousedown", onStart);
+}
+
+/* ============ TOOLTIP ============ */
+const tooltip = document.getElementById("tooltip");
+function showTooltip(e, a) {
+  const s = STATUS[a.status];
+  tooltip.innerHTML = `
+    <h4>${escapeHtml(a.nama)}</h4>
+    <div class="tt-row"><span>Status</span><b style="color:${s.color}">${s.label} (${a.progress}%)</b></div>
+    <div class="tt-row"><span>Mulai</span><b>${fmtDT(a.start)}</b></div>
+    <div class="tt-row"><span>Selesai</span><b>${fmtDT(a.end)}</b></div>
+    <div class="tt-row"><span>PIC</span><b>${escapeHtml(a.pic||"-")}</b></div>
+  `;
+  tooltip.classList.add("show");
+  moveTooltip(e);
+}
+function moveTooltip(e) {
+  const pad = 14;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  const w = tooltip.offsetWidth, h = tooltip.offsetHeight;
+  if (x+w > innerWidth-10) x = e.clientX-w-pad;
+  if (y+h > innerHeight-10) y = e.clientY-h-pad;
+  tooltip.style.left = x+"px";
+  tooltip.style.top = y+"px";
+}
+const hideTooltip = () => tooltip.classList.remove("show");
+
+/* ============ FIND ============ */
+const findCategory = id => DATA.find(c => c.id === id);
+const findActivity = (cid, aid) => { const c = findCategory(cid); return c ? (c.activities||[]).find(a => a.id === aid) : null; };
+
+/* ============ CONFIRM ============ */
+function showConfirm({ title, message, confirmText = "Hapus", onConfirm }) {
+  const ov = document.getElementById("confirmModal");
+  document.getElementById("confirmContent").innerHTML = `
+    <div class="confirm-icon">🗑</div>
+    <h3>${escapeHtml(title)}</h3>
+    <p>${escapeHtml(message)}</p>
+    <div class="confirm-actions">
+      <button class="btn" id="cfm-cancel">Batal</button>
+      <button class="btn danger" id="cfm-ok">${escapeHtml(confirmText)}</button>
+    </div>
+  `;
+  ov.classList.add("show");
+  document.getElementById("cfm-cancel").onclick = () => ov.classList.remove("show");
+  document.getElementById("cfm-ok").onclick = () => { ov.classList.remove("show"); onConfirm(); };
+  ov.onclick = e => { if (e.target === ov) ov.classList.remove("show"); };
+}
+
+/* ============ DELETE ============ */
+function askDeleteActivity(catId, actId) {
+  const cat = findCategory(catId), act = findActivity(catId, actId);
+  if (!cat || !act) return;
+  showConfirm({
+    title: "Hapus Activity?",
+    message: `"${act.nama}" akan dihapus dari "${cat.nama}".`,
+    confirmText: "🗑 Hapus",
+    onConfirm: () => doDeleteActivity(catId, actId)
+  });
+}
+function doDeleteActivity(catId, actId) {
+  const cat = findCategory(catId);
+  if (!cat) return;
+  const idx = (cat.activities||[]).findIndex(a => a.id === actId);
+  if (idx === -1) return;
+  const deleted = cat.activities[idx];
+  const snap = JSON.parse(JSON.stringify(cat.activities));
+  cat.activities.splice(idx, 1);
+  saveToGitHub();
+  refresh();
+  closeModal();
+  showToast(`🗑 "${deleted.nama}" dihapus`, "var(--blocked)", () => {
+    cat.activities = snap;
+    saveToGitHub();
+    refresh();
+    showToast("↩ Activity dikembalikan");
+  });
+}
+function askDeleteCategory(catId) {
+  const cat = findCategory(catId);
+  if (!cat) return;
+  showConfirm({
+    title: "Hapus Kategori?",
+    message: `"${cat.nama}" beserta ${(cat.activities||[]).length} activity akan dihapus.`,
+    confirmText: "🗑 Hapus Semua",
+    onConfirm: () => {
+      const idx = DATA.findIndex(c => c.id === catId);
+      const snap = JSON.parse(JSON.stringify(DATA));
+      DATA.splice(idx, 1);
+      saveToGitHub();
+      refresh();
+      closeModal();
+      showToast(`🗑 Kategori "${cat.nama}" dihapus`, "var(--blocked)", () => {
+        DATA = snap;
+        saveToGitHub();
+        refresh();
+        showToast("↩ Kategori dikembalikan");
+      });
+    }
+  });
+}
+
+/* ============ ACTIVITY MODAL ============ */
+function openActivityModal(catId, actId = null) {
+  if (!IS_ADMIN) return;
+  const cat = findCategory(catId);
+  if (!cat) return;
+  const a = actId ? findActivity(catId, actId) : {
+    id: uid(), nama: "Activity Baru",
+    start: toLocalISO(new Date()), end: toLocalISO(new Date(Date.now()+3600*1000)),
+    pic: "", tools: "", status: "pending", progress: 0, catatan: ""
+  };
+  const isEdit = !!actId;
+  document.getElementById("modalContent").innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>${isEdit?"Edit":"Tambah"} Activity</h3>
+    <p class="sub">Kategori: ${escapeHtml(cat.nama)}</p>
+    <div class="form-group"><label>Nama</label><input type="text" id="f-nama" value="${escapeHtml(a.nama)}" /></div>
+    <div class="form-row">
+      <div class="form-group"><label>Mulai</label><input type="datetime-local" id="f-start" value="${toInputDT(a.start)}" /></div>
+      <div class="form-group"><label>Selesai</label><input type="datetime-local" id="f-end" value="${toInputDT(a.end)}" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Status</label>
+        <select id="f-status">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${a.status===k?"selected":""}>${v.icon} ${v.label}</option>`).join("")}</select>
+      </div>
+      <div class="form-group"><label>Progress (%)</label><input type="number" id="f-progress" min="0" max="100" value="${a.progress}" /></div>
+    </div>
+    <div class="form-group"><label>PIC</label><input type="text" id="f-pic" value="${escapeHtml(a.pic||"")}" /></div>
+    <div class="form-group"><label>Tools</label><input type="text" id="f-tools" value="${escapeHtml(a.tools||"")}" /></div>
+    <div class="form-group"><label>Catatan</label><textarea id="f-catatan">${escapeHtml(a.catatan||"")}</textarea></div>
+    <div class="form-actions">
+      <div class="left-group">${isEdit?`<button class="btn danger" id="btn-del">🗑 Hapus</button>`:""}</div>
+      <button class="btn" onclick="closeModal()">Batal</button>
+      <button class="btn primary" id="btn-save">${isEdit?"💾 Simpan":"➕ Tambah"}</button>
+    </div>
+  `;
+  document.getElementById("modal").classList.add("show");
+  document.getElementById("btn-save").onclick = () => saveActivity(catId, actId);
+  if (isEdit) document.getElementById("btn-del").onclick = () => { closeModal(); setTimeout(()=>askDeleteActivity(catId, actId),150); };
+}
+
+function saveActivity(catId, actId) {
+  const cat = findCategory(catId);
+  if (!cat) return;
+  const payload = {
+    nama: document.getElementById("f-nama").value.trim() || "Untitled",
+    start: document.getElementById("f-start").value,
+    end: document.getElementById("f-end").value,
+    status: document.getElementById("f-status").value,
+    progress: Math.min(100, Math.max(0, parseInt(document.getElementById("f-progress").value)||0)),
+    pic: document.getElementById("f-pic").value.trim(),
+    tools: document.getElementById("f-tools").value.trim(),
+    catatan: document.getElementById("f-catatan").value.trim()
+  };
+  if (!payload.start || !payload.end) { showToast("⚠ Tanggal wajib", "var(--progress)"); return; }
+  if (parseDT(payload.end) <= parseDT(payload.start)) { showToast("⚠ Selesai harus setelah mulai", "var(--progress)"); return; }
+  if (actId) { const act = findActivity(catId, actId); if (act) Object.assign(act, payload); }
+  else { cat.activities = cat.activities || []; cat.activities.push({ id: uid(), ...payload }); }
+  saveToGitHub();
+  refresh();
+  closeModal();
+}
+
+/* ============ CATEGORY ============ */
+function addCategory() {
+  if (!IS_ADMIN) return;
+  document.getElementById("modalContent").innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>Tambah Kategori</h3>
+    <p class="sub">Grup untuk activity</p>
+    <div class="form-group"><label>Nama</label><input type="text" id="c-nama" /></div>
+    <div class="form-group"><label>Warna</label><input type="color" id="c-color" value="#00d4ff" style="height:42px;padding:4px;cursor:pointer;" /></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal()">Batal</button>
+      <button class="btn primary" id="btn-save-cat">➕ Tambah</button>
+    </div>
+  `;
+  document.getElementById("modal").classList.add("show");
+  document.getElementById("btn-save-cat").onclick = () => saveCategory(null);
+}
+function editCategory(catId) {
+  if (!IS_ADMIN) return;
+  const cat = findCategory(catId);
+  if (!cat) return;
+  document.getElementById("modalContent").innerHTML = `
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3>Edit Kategori</h3>
+    <p class="sub">${(cat.activities||[]).length} activity</p>
+    <div class="form-group"><label>Nama</label><input type="text" id="c-nama" value="${escapeHtml(cat.nama)}" /></div>
+    <div class="form-group"><label>Warna</label><input type="color" id="c-color" value="${cat.color}" style="height:42px;padding:4px;cursor:pointer;" /></div>
+    <div class="form-actions">
+      <div class="left-group"><button class="btn danger" id="btn-del-cat">🗑 Hapus Kategori</button></div>
+      <button class="btn" onclick="closeModal()">Batal</button>
+      <button class="btn primary" id="btn-save-cat">💾 Simpan</button>
+    </div>
+  `;
+  document.getElementById("modal").classList.add("show");
+  document.getElementById("btn-save-cat").onclick = () => saveCategory(catId);
+  document.getElementById("btn-del-cat").onclick = () => { closeModal(); setTimeout(()=>askDeleteCategory(catId),150); };
+}
+function saveCategory(catId) {
+  const nama = document.getElementById("c-nama").value.trim();
+  const color = document.getElementById("c-color").value;
+  if (!nama) { showToast("⚠ Nama wajib", "var(--progress)"); return; }
+  if (catId) { const c = findCategory(catId); c.nama = nama; c.color = color; }
+  else DATA.push({ id: uid(), nama, color, activities: [] });
+  saveToGitHub();
+  refresh();
+  closeModal();
+}
+const addActivity = catId => openActivityModal(catId, null);
+const closeModal = () => document.getElementById("modal").classList.remove("show");
+document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
+
+/* ============ EXPORT / IMPORT / RESET ============ */
+function exportData() {
+  const blob = new Blob([JSON.stringify(DATA, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `timeline-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("💾 File diexport");
+}
+function importData() {
+  if (!IS_ADMIN) return;
+  const input = document.createElement("input");
+  input.type = "file"; input.accept = ".json";
+  input.onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const p = JSON.parse(ev.target.result);
+        if (!Array.isArray(p)) throw new Error("Format salah");
+        DATA = p;
+        saveToGitHub();
+        refresh();
+        showToast("📥 Data diimport");
+      } catch(err) { showToast("⚠ " + err.message, "var(--progress)"); }
+    };
+    r.readAsText(f);
+  };
+  input.click();
+}
+function resetData() {
+  if (!IS_ADMIN) return;
+  showConfirm({
+    title: "Reset Data?",
+    message: "Semua perubahan akan hilang. Lanjutkan?",
+    confirmText: "🔄 Reset",
+    onConfirm: () => {
+      DATA = [];
+      saveToGitHub();
+      refresh();
+      showToast("🔄 Reset", "var(--progress)");
+    }
+  });
+}
+
+/* ============ TOAST ============ */
+function showToast(msg, color = "var(--done)", undoFn = null) {
+  const t = document.getElementById("toast");
+  t.innerHTML = `<span>${msg}</span>` + (undoFn?`<button class="undo-btn" id="undoBtn">↩ UNDO</button>`:"");
+  t.style.background = color;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 5000);
+  if (undoFn) document.getElementById("undoBtn").onclick = () => { undoFn(); t.classList.remove("show"); };
+}
+
+/* ============ SCALE ============ */
+document.querySelectorAll("[data-scale]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("[data-scale]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    SCALE = btn.dataset.scale;
+    refresh();
+  });
+});
+
+/* ============ SYNC SCROLL ============ */
+const chartScroll = document.getElementById("chartScroll");
+const labelsBody = document.getElementById("labelsBody");
+chartScroll.addEventListener("scroll", () => { labelsBody.scrollTop = chartScroll.scrollTop; });
+labelsBody.addEventListener("scroll", () => { chartScroll.scrollTop = labelsBody.scrollTop; });
+
+/* ============ THEME ============ */
+document.getElementById("themeBtn").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur === "light" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", next);
+  document.getElementById("themeBtn").textContent = next === "light" ? "☀️" : "🌙";
+});
+
+/* ============ BUTTONS ============ */
+document.getElementById("unlockBtn").onclick = unlockAdmin;
+document.getElementById("addActBtn").onclick = () => { if (!DATA.length) { showToast("⚠ Buat kategori dulu", "var(--progress)"); return; } openActivityModal(DATA[0].id, null); };
+document.getElementById("addActBtn2").onclick = () => { if (!DATA.length) { showToast("⚠ Buat kategori dulu", "var(--progress)"); return; } openActivityModal(DATA[0].id, null); };
+document.getElementById("addCatBtn").onclick = addCategory;
+document.getElementById("exportBtn").onclick = exportData;
+document.getElementById("importBtn").onclick = importData;
+document.getElementById("resetBtn").onclick = resetData;
+
+/* ============ REFRESH ============ */
+function refresh() {
+  recalcRange();
+  renderStats();
+  renderLabels();
+  renderChart();
+}
+
+/* ============ INIT ============ */
+(async () => {
+  // restore admin session (kalau refresh halaman)
+  if (sessionStorage.getItem("gantt_admin") === "1") IS_ADMIN = true;
+  applyAdminMode();
+
+  await fetchFromGitHub();
+  refresh();
+  // refresh dari GitHub setiap 60 detik (kalau ada update dari tim lain)
+  setInterval(async () => {
+    if (!IS_ADMIN) { await fetchFromGitHub(); refresh(); }
+  }, 60000);
+})();
+</script>
+</body>
+</html>
