@@ -1,0 +1,35 @@
+[
+  {
+    "id": "rampdown",
+    "nama": "Proses Ramp Down to Total S/D Well",
+    "color": "#00d4ff",
+    "activities": [
+      { "id": "a1", "nama": "Koordinasi & izin ramp down", "start": "2025-01-06T08:00", "end": "2025-01-07T17:00", "pic": "Production Supervisor, Field Operator", "tools": "Radio, Checklist", "status": "done", "progress": 100, "catatan": "Izin keluar dari manajemen & HSE." },
+      { "id": "a2", "nama": "Penutupan choke bertahap", "start": "2025-01-07T08:00", "end": "2025-01-09T12:00", "pic": "Well Operator", "tools": "Choke Manifold, Pressure Gauge", "status": "done", "progress": 100, "catatan": "" },
+      { "id": "a3", "nama": "Blowdown & depressurize", "start": "2025-01-09T13:00", "end": "2025-01-12T17:00", "pic": "Operator, HSE", "tools": "Blowdown Valve, Gas Detector", "status": "progress", "progress": 60, "catatan": "" },
+      { "id": "a4", "nama": "Isolasi sumur (S/D total)", "start": "2025-01-12T08:00", "end": "2025-01-14T17:00", "pic": "Well Operator", "tools": "SSV, Blind Flange", "status": "pending", "progress": 0, "catatan": "" }
+    ]
+  },
+  {
+    "id": "repair",
+    "nama": "Repair Leaking",
+    "color": "#7c5cff",
+    "activities": [
+      { "id": "b1", "nama": "Identifikasi titik kebocoran", "start": "2025-01-13T08:00", "end": "2025-01-15T17:00", "pic": "Maintenance, Inspector", "tools": "Ultrasonic Detector, Soap Test", "status": "progress", "progress": 40, "catatan": "" },
+      { "id": "b2", "nama": "Persiapan alat & material", "start": "2025-01-15T08:00", "end": "2025-01-17T12:00", "pic": "Warehouse, Maintenance", "tools": "Gasket, Seal Kit, Torque Wrench", "status": "pending", "progress": 0, "catatan": "" },
+      { "id": "b3", "nama": "Pengelasan / ganti part", "start": "2025-01-17T08:00", "end": "2025-01-21T17:00", "pic": "Welder, Mechanic", "tools": "Welding Machine, Grinder", "status": "pending", "progress": 0, "catatan": "" },
+      { "id": "b4", "nama": "Pressure test setelah repair", "start": "2025-01-21T08:00", "end": "2025-01-22T17:00", "pic": "QC, Operator", "tools": "Hydrotest Pump, Pressure Chart", "status": "pending", "progress": 0, "catatan": "" }
+    ]
+  },
+  {
+    "id": "rampup",
+    "nama": "Proses Ramp Up (Back Online Well)",
+    "color": "#10d98a",
+    "activities": [
+      { "id": "c1", "nama": "Pengecekan akhir & line up", "start": "2025-01-22T08:00", "end": "2025-01-23T12:00", "pic": "Operator, Supervisor", "tools": "Checklist, Valve Key", "status": "pending", "progress": 0, "catatan": "" },
+      { "id": "c2", "nama": "Pressurize & leak test ulang", "start": "2025-01-23T13:00", "end": "2025-01-24T17:00", "pic": "Operator", "tools": "Pressure Gauge, Gas Detector", "status": "pending", "progress": 0, "catatan": "" },
+      { "id": "c3", "nama": "Buka choke bertahap (ramp up)", "start": "2025-01-24T08:00", "end": "2025-01-26T17:00", "pic": "Well Operator", "tools": "Choke Manifold", "status": "pending", "progress": 0, "catatan": "" },
+      { "id": "c4", "nama": "Monitoring produksi stabil", "start": "2025-01-26T08:00", "end": "2025-01-29T17:00", "pic": "Production Engineer", "tools": "Flow Meter, SCADA", "status": "pending", "progress": 0, "catatan": "" }
+    ]
+  }
+]
