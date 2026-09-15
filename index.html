@@ -128,7 +128,17 @@
   .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
   .toast .undo-btn{background:rgba(0,0,0,.2);border:none;color:#000;padding:4px 12px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px;font-family:inherit}
 
-  .sync-badge{position:fixed;top:14px;left:50%;transform:translateX(-50%);padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;z-index:60;background:var(--card);border:1px solid var(--border);color:var(--text-dim);display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  /* ===== SYNC BADGE — dipindah ke kanan bawah ===== */
+  .sync-badge{
+    position:fixed;bottom:14px;right:14px;top:auto;left:auto;
+    padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;
+    z-index:60;background:var(--card);border:1px solid var(--border);
+    color:var(--text-dim);display:flex;align-items:center;gap:6px;
+    box-shadow:0 4px 12px rgba(0,0,0,.3);
+    opacity:0;transition:opacity .3s,transform .3s;
+    pointer-events:none;transform:translateY(10px);
+  }
+  .sync-badge.show{opacity:1;transform:translateY(0);}
   .sync-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--pending)}
   .sync-badge.syncing .dot{background:var(--progress);animation:pulse 1s infinite}
   .sync-badge.synced .dot{background:var(--done)}
@@ -140,13 +150,13 @@
 </head>
 <body>
 
-<!-- ====== CONFIG — GANTI BAGIAN INI ====== -->
+<!-- ====== CONFIG ====== -->
 <script>
 window.CONFIG = {
-  GITHUB_OWNER: "PAPA FILO - Project Timeline",
+  GITHUB_OWNER: "PapaFilo",
   GITHUB_REPO: "project-timeline",
   GITHUB_BRANCH: "main",
-  GITHUB_TOKEN: "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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",
+  GITHUB_TOKEN: "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",
   EDIT_PASSWORD: "jabung2026",
   DATA_FILE: "data.json"
 };
@@ -171,9 +181,6 @@ window.CONFIG = {
     <button class="btn" data-scale="day">Hari</button>
     <button class="btn primary edit-only" id="addActBtn" style="display:none">➕ Activity</button>
     <button class="btn edit-only" id="addCatBtn" style="display:none">📁 Kategori</button>
-    <button class="btn" id="exportBtn">💾 Export</button>
-    <button class="btn edit-only" id="importBtn" style="display:none">📥 Import</button>
-    <button class="btn edit-only" id="resetBtn" style="display:none">🔄 Reset</button>
     <button class="btn" id="themeBtn">🌙</button>
   </div>
 </div>
@@ -219,14 +226,20 @@ function toLocalISO(d){const p=n=>String(n).padStart(2,"0");return`${d.getFullYe
 const escapeHtml = s => String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 /* ============ GITHUB SYNC ============ */
-function setSync(status, text) {
+let _syncTimer = null;
+function setSync(status, text, autoHideMs = 3000) {
   const b = document.getElementById("syncBadge");
   b.className = "sync-badge " + status;
   document.getElementById("syncText").textContent = text;
+  b.classList.add("show");
+  clearTimeout(_syncTimer);
+  if (autoHideMs > 0) {
+    _syncTimer = setTimeout(() => b.classList.remove("show"), autoHideMs);
+  }
 }
 
 async function fetchFromGitHub() {
-  setSync("syncing", "Loading dari GitHub...");
+  setSync("syncing", "Loading dari GitHub...", 0);
   try {
     const url = `https://raw.githubusercontent.com/${CFG.GITHUB_OWNER}/${CFG.GITHUB_REPO}/${CFG.GITHUB_BRANCH}/${CFG.DATA_FILE}?t=${Date.now()}`;
     const res = await fetch(url);
@@ -234,8 +247,7 @@ async function fetchFromGitHub() {
     const json = await res.json();
     DATA = json;
     localStorage.setItem("gantt_backup", JSON.stringify(json));
-    setSync("synced", "✓ Synced");
-    setTimeout(() => setSync("", ""), 2000);
+    setSync("synced", "✓ Synced"); // auto-hide 3s
     return true;
   } catch(e) {
     console.warn("Gagal fetch GitHub, pakai backup lokal:", e);
@@ -253,17 +265,17 @@ async function fetchFromGitHub() {
 async function saveToGitHub() {
   if (!IS_ADMIN) { showToast("⚠ Readonly mode", "var(--progress)"); return; }
   if (!CFG.GITHUB_TOKEN || CFG.GITHUB_TOKEN.includes("ANDA")) {
-    showToast("⚠ Token belum diisi — hanya tersimpan lokal", "var(--progress)");
+    showToast("⚠ Token belum diisi", "var(--progress)");
     localStorage.setItem("gantt_backup", JSON.stringify(DATA));
     return;
   }
-  setSync("syncing", "Saving ke GitHub...");
+  setSync("syncing", "Saving ke GitHub...", 0);
   try {
     // Ambil SHA terbaru (kalau ada)
     let sha = null;
     const getUrl = `${API_BASE}/${CFG.DATA_FILE}?ref=${CFG.GITHUB_BRANCH}`;
     const getRes = await fetch(getUrl, {
-      headers: { "Authorization": `Bearer ${CFG.GITHUB_TOKEN}`, "Accept": "application/vnd.github+json" }
+      headers: { "Authorization": `token ${CFG.GITHUB_TOKEN}`, "Accept": "application/vnd.github+json" }
     });
     if (getRes.ok) { const j = await getRes.json(); sha = j.sha; }
 
@@ -273,7 +285,7 @@ async function saveToGitHub() {
     const putRes = await fetch(`${API_BASE}/${CFG.DATA_FILE}`, {
       method: "PUT",
       headers: {
-        "Authorization": `Bearer ${CFG.GITHUB_TOKEN}`,
+        "Authorization": `token ${CFG.GITHUB_TOKEN}`,
         "Accept": "application/vnd.github+json",
         "Content-Type": "application/json"
       },
@@ -290,11 +302,10 @@ async function saveToGitHub() {
     }
     localStorage.setItem("gantt_backup", JSON.stringify(DATA));
     setSync("synced", "✓ Tersimpan ke GitHub");
-    setTimeout(() => setSync("", ""), 2500);
     showToast("✓ Tersimpan di GitHub");
   } catch(e) {
     console.error("Save error:", e);
-    setSync("error", "⚠ Gagal save: " + e.message);
+    setSync("error", "⚠ Gagal save: " + e.message, 8000);
     showToast("⚠ Gagal save ke GitHub", "var(--blocked)");
     localStorage.setItem("gantt_backup", JSON.stringify(DATA));
   }
@@ -844,53 +855,6 @@ const addActivity = catId => openActivityModal(catId, null);
 const closeModal = () => document.getElementById("modal").classList.remove("show");
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
 
-/* ============ EXPORT / IMPORT / RESET ============ */
-function exportData() {
-  const blob = new Blob([JSON.stringify(DATA, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `timeline-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast("💾 File diexport");
-}
-function importData() {
-  if (!IS_ADMIN) return;
-  const input = document.createElement("input");
-  input.type = "file"; input.accept = ".json";
-  input.onchange = e => {
-    const f = e.target.files[0]; if (!f) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      try {
-        const p = JSON.parse(ev.target.result);
-        if (!Array.isArray(p)) throw new Error("Format salah");
-        DATA = p;
-        saveToGitHub();
-        refresh();
-        showToast("📥 Data diimport");
-      } catch(err) { showToast("⚠ " + err.message, "var(--progress)"); }
-    };
-    r.readAsText(f);
-  };
-  input.click();
-}
-function resetData() {
-  if (!IS_ADMIN) return;
-  showConfirm({
-    title: "Reset Data?",
-    message: "Semua perubahan akan hilang. Lanjutkan?",
-    confirmText: "🔄 Reset",
-    onConfirm: () => {
-      DATA = [];
-      saveToGitHub();
-      refresh();
-      showToast("🔄 Reset", "var(--progress)");
-    }
-  });
-}
-
 /* ============ TOAST ============ */
 function showToast(msg, color = "var(--done)", undoFn = null) {
   const t = document.getElementById("toast");
@@ -931,9 +895,6 @@ document.getElementById("unlockBtn").onclick = unlockAdmin;
 document.getElementById("addActBtn").onclick = () => { if (!DATA.length) { showToast("⚠ Buat kategori dulu", "var(--progress)"); return; } openActivityModal(DATA[0].id, null); };
 document.getElementById("addActBtn2").onclick = () => { if (!DATA.length) { showToast("⚠ Buat kategori dulu", "var(--progress)"); return; } openActivityModal(DATA[0].id, null); };
 document.getElementById("addCatBtn").onclick = addCategory;
-document.getElementById("exportBtn").onclick = exportData;
-document.getElementById("importBtn").onclick = importData;
-document.getElementById("resetBtn").onclick = resetData;
 
 /* ============ REFRESH ============ */
 function refresh() {
@@ -945,13 +906,10 @@ function refresh() {
 
 /* ============ INIT ============ */
 (async () => {
-  // restore admin session (kalau refresh halaman)
   if (sessionStorage.getItem("gantt_admin") === "1") IS_ADMIN = true;
   applyAdminMode();
-
   await fetchFromGitHub();
   refresh();
-  // refresh dari GitHub setiap 60 detik (kalau ada update dari tim lain)
   setInterval(async () => {
     if (!IS_ADMIN) { await fetchFromGitHub(); refresh(); }
   }, 60000);
