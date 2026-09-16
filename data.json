@@ -1,43 +1,177 @@
 [
   {
     "id": "rampdown",
-    "nama": "Ramp Down to Total Shut down BGP",
+    "nama": "RAMP DOWN (BGP SHUTDOWN)",
     "color": "#00d4ff",
     "activities": [
       {
-        "id": "a1",
-        "nama": "Ramp down Preparation",
-        "start": "2026-09-17T06:00",
-        "end": "2026-09-17T08:00",
-        "pic": "Production Operation",
-        "tools": "Radio, Checklist, Permit, Plan Route Of Pad",
+        "id": "rd1",
+        "nama": "GEMAH wells + WB AG-JII Trunk Line (~10 MMSCFD)",
+        "start": "2026-09-18T00:00",
+        "end": "2026-09-18T01:00",
+        "pic": "",
+        "tools": "",
         "status": "pending",
         "progress": 0,
         "catatan": ""
       },
       {
-        "id": "1e0t049b",
-        "nama": "Divert Gas WB-SB from BGP to CPS",
-        "start": "2026-09-17T08:00",
-        "end": "2026-09-17T09:00",
+        "id": "rd2",
+        "nama": "NEB wells (~30 MMSCFD)",
+        "start": "2026-09-18T01:00",
+        "end": "2026-09-18T02:00",
+        "pic": "",
+        "tools": "",
         "status": "pending",
         "progress": 0,
-        "pic": "BGP Ops & CPS Ops",
-        "tools": "Compressor unit readines",
+        "catatan": ""
+      },
+      {
+        "id": "rd3",
+        "nama": "NEB wells (~40 MMSCFD)",
+        "start": "2026-09-18T02:00",
+        "end": "2026-09-18T03:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      },
+      {
+        "id": "rd4",
+        "nama": "NEB wells (~50 MMSCFD)",
+        "start": "2026-09-18T03:00",
+        "end": "2026-09-18T04:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      },
+      {
+        "id": "rd5",
+        "nama": "NEB wells (~50 MMSCFD)",
+        "start": "2026-09-18T04:00",
+        "end": "2026-09-18T05:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      },
+      {
+        "id": "rd6",
+        "nama": "GEMAH GRF's (~16 MMSCFD)",
+        "start": "2026-09-18T05:00",
+        "end": "2026-09-18T07:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      },
+      {
+        "id": "rd7",
+        "nama": "NEB GRF's (~21 MMSCFD)",
+        "start": "2026-09-18T05:00",
+        "end": "2026-09-18T06:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
         "catatan": ""
       }
     ]
   },
   {
-    "id": "repair",
-    "nama": "Repair Leaking",
+    "id": "repairment",
+    "nama": "REPAIRMENT",
     "color": "#7c5cff",
-    "activities": []
+    "activities": [
+      {
+        "id": "rp1",
+        "nama": "Starting stop all equipment sequencely",
+        "start": "2026-09-18T02:00",
+        "end": "2026-09-18T08:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      },
+      {
+        "id": "rp2",
+        "nama": "Isolate De-Ethanizer Condenser",
+        "start": "2026-09-18T06:00",
+        "end": "2026-09-18T08:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      },
+      {
+        "id": "rp3",
+        "nama": "Depressurizing and LOTO",
+        "start": "2026-09-18T06:00",
+        "end": "2026-09-18T10:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      },
+      {
+        "id": "rp4",
+        "nama": "Dismantling, cleaning and Re-installing De-Ethanizer Condenser Bundle",
+        "start": "2026-09-18T10:00",
+        "end": "2026-09-19T07:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      },
+      {
+        "id": "rp5",
+        "nama": "De-LOTO",
+        "start": "2026-09-19T07:00",
+        "end": "2026-09-19T12:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      },
+      {
+        "id": "rp6",
+        "nama": "O2 Content Test, Pressurize, Leak Test",
+        "start": "2026-09-19T12:00",
+        "end": "2026-09-19T16:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      }
+    ]
   },
   {
     "id": "rampup",
-    "nama": "Proses Ramp Up (Back Online Well)",
+    "nama": "BGP RAMP UP (BGP ONLINE)",
     "color": "#10d98a",
-    "activities": []
+    "activities": [
+      {
+        "id": "ru1",
+        "nama": "Begin BOL GEMAH & NEB wells + WB AG-JII Trunk Line",
+        "start": "2026-09-19T16:00",
+        "end": "2026-09-19T23:00",
+        "pic": "",
+        "tools": "",
+        "status": "pending",
+        "progress": 0,
+        "catatan": ""
+      }
+    ]
   }
 ]
